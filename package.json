@@ -21,9 +21,10 @@
     "url"  : "https://github.com/clarkparsia/stardog.js/issues" 
   },
   "dependencies"  : {
-    "request"      : "2.9.x",
+    "request"      : ">=2.11.1",
     "jsonld" : ">=0.0.1",
-    "querystring" : ">=0.1.0"
+    "querystring" : ">=0.1.0",
+    "form-data" : ">=0.0.4"
   },
   "devDependencies" : {
     "jasmine-node" : ">=1.0.26"

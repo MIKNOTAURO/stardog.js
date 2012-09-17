@@ -122,7 +122,7 @@
 	if (typeof exports !== 'undefined') {
 		// Node.js implementation using request
 
-		Connection.prototype._httpRequest = function(theMethod, resource, acceptH, params, callback, msgBody, isJsonBody, contentType, multipart) {
+		Connection.prototype._httpRequest = function(theMethod, resource, acceptH, params, callback, msgBody, isJsonBody, contentType) {
 			var req_url = this.endpoint + resource,
 				strParams = qs.stringify(params);
 
@@ -192,13 +192,59 @@
 				reqJSON["headers"]["Authorization"] = authHeaderVal;
 			}
 
-			if (multipart && multipart != null) {
-				reqJSON["multipart"] = multipart;
-			}
-
 			request(reqJSON, 
 				fnResponseHandler	
 			);
+		};
+
+		Connection.prototype._httpRequestMultipart = function (url_path, params, filePaths, callback) {
+			var fs = require("fs");
+			var fnResponseHandler = function (error, response, body) {
+				if (!error) {
+					callback(body, response);
+				}
+				else {
+					console.log('Error found!');
+					console.log(error);
+				}
+			};
+
+			var reqJSON = {
+				"headers" : {
+					"Accept" : "text/plain"
+				}
+			};
+			if (this.credentials) {
+				var authHeaderVal = "Basic " + new Buffer(this.credentials.username + ":" + this.credentials.password).toString("base64");
+
+				reqJSON["headers"]["Authorization"] = authHeaderVal;
+			}
+
+			console.log(params);
+			console.log(filePaths);
+			console.log(this.endpoint + url_path);
+
+			var req = request.post(this.endpoint + url_path, reqJSON, fnResponseHandler);
+			var formParams = req.form();
+
+			formParams.append("root", JSON.stringify(params));
+
+			var filepath = "";
+			if (filePaths && filePaths !== null) {
+				if (filePaths instanceof Array) {
+					for (var i=0; i < filePaths.length; i++) {
+						filepath = filePaths[i].replace(/^.*[\\\/]/, '');
+						formParams.append(filepath, fs.createReadStream(filePaths[i]))
+					}
+				}
+				else {
+					filepath = filePaths.replace(/^.*[\\\/]/, '');
+					formParams.append(filepath, fs.createReadStream(filePaths));
+				}
+			}
+			
+
+			console.log("FormParams Headers: "+ formParams.getHeaders());
 		};
 	}
 	else {
@@ -491,6 +537,21 @@
 	// ----------------------------------------------------------------------------------
 	// Database operations.
 	// ----------------------------------------------------------------------------------
+
+	// ----------------
+	// Create a new DB (POST)
+	// ----------------
+
+	Connection.prototype.createDB = function(name, optionsConf, filesConf, callback, filePaths) {
+		// build root JSON object with configuration of the new db.
+		var dbConfig = {
+			"dbname" : name,
+			"options" : optionsConf,
+			"files" : filesConf
+		};
+
+		this._httpRequestMultipart("admin/databases", dbConfig, filePaths, callback);
+	};
 
 	// ----------------
 	// List databases (GET)
